@@ -13,6 +13,16 @@ namespace BearsBranchyHarvest
     /// </summary>
     public class BearsBranchyHarvestModSystem : ModSystem
     {
+        #region Enums
+
+        public enum LeafBlockType
+        {
+            Branchy,
+            Leafy
+        }
+
+        #endregion Enums
+
         #region Classes
 
         /// <summary>
@@ -123,6 +133,8 @@ namespace BearsBranchyHarvest
 
         /// <summary>
         /// Triggers once assets have been loaded and patched from all sources but before the assets are constructed into C# block objects. Our patches happen here.
+        ///
+        /// This gradually turned into a monolithic function. Woops.
         /// </summary>
         public override void AssetsLoaded(ICoreAPI api)
         {
@@ -165,99 +177,90 @@ namespace BearsBranchyHarvest
                         // the block code will help us sort out what logic to use. Unfortunately there's no one-size fits all patch for every leaf block.
                         string? blockCode = leafObject["code"]?.ToString();
 
-                        // extract the drop list as an object we can traverse and alter
-                        dropArray = leafObject["drops"] as JArray;
-                        if (dropArray != null) {
-                            // add knife drops if enabled. These have to go first in the drop array and be labeled with lastDrop
-                            // so they execute first and stop stick and seed drops
+                        if (blockCode == null) {
+                            continue; // abort if we can't even figure out what block it is.
+                        }
+                        // Handle Wildcraft code. Wildcraft has things a bit different from vanilla.
+                        else if (assetLocation.Path.Contains("wildcrafttree")) {
+                        }
 
-                            // branchy drops are handled here, just one right now but more will come with mod compatibility
-                            if (settings.AllowBranchyDropWithKnife) {
-                                if (blockCode != null && blockCode.Equals("leavesbranchy")) {
-                                    DropPresetObject branchyDrop = new("block", "leavesbranchy-placed-{wood}", "knife", 1f, 0f, true);
-                                    dropArray.AddFirst(JToken.FromObject(branchyDrop));
-                                    isPatched = true;
-                                }
-                            }
+                        // Guess what? Biodiversity has the same exact trees but in a completely different JSON configuration.
+                        else if (assetLocation.Path.Contains("bdtree")) {
+                        }
 
-                            // leafy blocks have all sorts of naming schemes and I couldn't figure out a regular expression that could handle them all
-                            if (settings.AllowLeafyDropWithKnife) {
-                                if (blockCode != null && blockCode.Equals("leaves")) {
-                                    DropPresetObject branchyDrop = new("block", "leaves-placed-{wood}", "knife", 1f, 0f, true);
-                                    dropArray.AddFirst(JToken.FromObject(branchyDrop));
-                                    isPatched = true;
-                                }
-                                if (blockCode != null && blockCode.Equals("bambooleaves")) {
-                                    DropPresetObject branchyDrop = new("block", "bambooleaves-{color}-placed", "knife", 1f, 0f, true);
-                                    dropArray.AddFirst(JToken.FromObject(branchyDrop));
-                                    isPatched = true;
-                                }
-                                if (blockCode != null && blockCode.Equals("leavesnarrow")) {
-                                    DropPresetObject branchyDrop = new("block", "leavesnarrow-placed-{wood}", "knife", 1f, 0f, true);
-                                    dropArray.AddFirst(JToken.FromObject(branchyDrop));
-                                    isPatched = true;
-                                }
-                            }
+                        // We have finally reached vanilla leaf block code.
+                        else {
+                            // extract the drop list as an object we can traverse and alter
+                            dropArray = leafObject["drops"] as JArray;
+                            if (dropArray != null) {
+                                // add knife drops if enabled. These have to go first in the drop array and be labeled with lastDrop
+                                // so they execute first and stop stick and seed drops
 
-                            // iterate through the JSON drop array and search for seeds and sticks so we can modify them
-                            foreach (JObject dropPreset in dropArray) {
-                                string? dropCode = dropPreset["code"]?.ToString();
-
-                                // alter stick drops if enabled
-                                if (settings.AlterStickDrops) {
-                                    if (dropCode is not null and "stick") {
-                                        if (blockCode != null && blockCode.Contains("branchy")) {
-                                            if (dropPreset["quantity"] is JObject dropObject) {
-                                                dropObject["avg"] = settings.BranchyStickAverage;
-
-                                                // not every quantity object has "var", so we need to do a little extra logic
-                                                if (dropObject.ContainsKey("var")) {
-                                                    dropObject["var"] = settings.BranchyStickVariance;
-                                                }
-                                                else {
-                                                    dropObject.Add("var", JToken.FromObject(settings.BranchyStickVariance));
-                                                }
-                                                isPatched = true;
-                                            }
-                                        }
-                                        else {
-                                            if (dropPreset["quantity"] is JObject dropObject) {
-                                                dropObject["avg"] = settings.LeafyStickAverage;
-
-                                                // not every quantity object has "var", so we need to do a little extra logic
-                                                if (dropObject.ContainsKey("var")) {
-                                                    dropObject["var"] = settings.LeafyStickVariance;
-                                                }
-                                                else {
-                                                    dropObject.Add("var", JToken.FromObject(settings.LeafyStickVariance));
-                                                }
-                                                isPatched = true;
-                                            }
-                                        }
+                                // branchy drops are handled here, just one right now but more will come with mod compatibility
+                                if (settings.AllowBranchyDropWithKnife) {
+                                    if (blockCode != null && blockCode.Equals("leavesbranchy")) {
+                                        AddBlockDrop(dropArray, "leavesbranchy-placed-{wood}");
+                                        isPatched = true;
                                     }
                                 }
 
-                                //    // alter seed drops if enabled
-                                //    if (settings.AlterSeedDrops) {
-                                //        if (dropCode != null && dropCode.Contains("treeseed-")) {
-                                //            if (dropPreset["quantity"] is JObject dropObject) {
-                                //                dropObject["avg"] = dropObject["avg"].ToObject<float>() * settings.SeedChanceMultiplier;
-                                //                isPatched = true;
-                                //            }
-                                //            else if (dropPreset["quantityByType"] is dropObject) {
-                                //            }
-                                //        }
-                                //    }
-                                //}
-                                //// add shears drops if enabled
-                                //if (settings.AllowShearsBoostDrops) {
-                                //    // work in progress
-                                //}
+                                // leafy blocks have all sorts of naming schemes and I couldn't figure out a regular expression that could handle them all
+                                if (settings.AllowLeafyDropWithKnife) {
+                                    if (blockCode.Equals("leaves")) {
+                                        AddBlockDrop(dropArray, "leaves-placed-{wood}");
+                                        isPatched = true;
+                                    }
+                                    else if (blockCode.Equals("bambooleaves")) {
+                                        AddBlockDrop(dropArray, "bambooleaves-{color}-placed");
+                                        isPatched = true;
+                                    }
+                                    else if (blockCode.Equals("leavesnarrow")) {
+                                        AddBlockDrop(dropArray, "leavesnarrow-placed-{wood}");
+                                        isPatched = true;
+                                    }
+                                }
 
+                                // iterate through the JSON drop array and search for seeds and sticks so we can modify them
+                                foreach (JObject dropPreset in dropArray) {
+                                    string? dropCode = dropPreset["code"]?.ToString();
+
+                                    // alter stick drops if enabled
+                                    if (settings.AlterStickDrops) {
+                                        if (dropCode is not null and "stick") {
+                                            if (blockCode != null && blockCode.Contains("branchy")) {
+                                                if (dropPreset["quantity"] is JObject dropObject) {
+                                                    PatchStickAmounts(dropObject, settings, LeafBlockType.Branchy);
+                                                    isPatched = true;
+                                                }
+                                            }
+                                            else {
+                                                if (dropPreset["quantity"] is JObject dropObject) {
+                                                    PatchStickAmounts(dropObject, settings, LeafBlockType.Leafy);
+                                                    isPatched = true;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    //    // alter seed drops if enabled
+                                    //    if (settings.AlterSeedDrops) {
+                                    //        if (dropCode != null && dropCode.Contains("treeseed-")) {
+                                    //            if (dropPreset["quantity"] is JObject dropObject) {
+                                    //                dropObject["avg"] = dropObject["avg"].ToObject<float>() * settings.SeedChanceMultiplier;
+                                    //                isPatched = true;
+                                    //            }
+                                    //            else if (dropPreset["quantityByType"] is dropObject) {
+                                    //            }
+                                    //        }
+                                    //    }
+                                    //}
+                                    //// add shears drops if enabled
+                                    //if (settings.AllowShearsBoostDrops) {
+                                    //    // work in progress
+                                    //}
+                                }
                                 if (isPatched) {
-                                    // finalize altered JSON object and recommit asset
-                                    Mod.Logger.Notification($"{Lang.Get("bearsbranchyharvest:patch-notification-patch-success")}{assetLocation}");
-                                    asset.Data = System.Text.Encoding.UTF8.GetBytes(leafObject.ToString());
+                                    SubmitPatchedJSONObject(leafObject, assetLocation, asset);
                                 }
                                 else {
                                     // handle the case that a provided asset can't accept any of the configured modifications, such as if we are given a dirt block or something.
@@ -272,6 +275,61 @@ namespace BearsBranchyHarvest
                     Mod.Logger.Error($"{Lang.Get("bearsbranchyharvest:patch-error-asset-malformed")} {Lang.Get("bearsbranchyharvest:patch-bit-asset")} {assetLocation} {Lang.Get("bearsbranchyharvest:patch-bit-exception")} {e.Message}");
                 }
             }
+        }
+
+        /// <summary>
+        /// Handles the main patching logic of a leaf block JSON object from Biodiversity: Trees.
+        /// </summary>
+        private void PatchBiodiversityLeafBlock(JObject leafObject, BranchyHarvestSettings settings, AssetLocation assetLoc, IAsset asset)
+        {
+        }
+
+        /// <summary>
+        /// Handles the main patching logic of a leaf block JSON object from Wildcraft: Trees and Shrubs.
+        /// </summary>
+        private void PatchWildcraftLeafBlock(JObject leafObject, BranchyHarvestSettings settings, AssetLocation assetLoc, IAsset asset)
+        {
+        }
+
+        /// <summary>
+        /// Handles the main patching logic of a vanilla leaf block JSON object.
+        /// </summary>
+        private void PatchVanillaLeafBlock(JObject leafObject, BranchyHarvestSettings settings, AssetLocation assetLoc, IAsset asset)
+        {
+        }
+
+        /// <summary>
+        /// Inserts a knife drop object at the beginning of the drop array, only needing a block code.
+        /// </summary>
+        private void AddBlockDrop(JArray dropArray, string blockToDrop)
+        {
+            DropPresetObject branchyDrop = new("block", blockToDrop, "knife", 1f, 0f, true);
+            dropArray.AddFirst(JToken.FromObject(branchyDrop));
+        }
+
+        /// <summary>
+        /// Patches the average and variance properties of the provided stick drop JSON object.
+        /// </summary>
+        private void PatchStickAmounts(JObject dropObject, BranchyHarvestSettings settings, LeafBlockType blockType)
+        {
+            dropObject["avg"] = blockType == LeafBlockType.Branchy ? settings.BranchyStickAverage : settings.LeafyStickAverage;
+
+            // not every quantity object has "var", so we need to do a little extra logic
+            if (dropObject.ContainsKey("var")) {
+                dropObject["var"] = blockType == LeafBlockType.Branchy ? settings.BranchyStickVariance : settings.LeafyStickVariance;
+            }
+            else {
+                dropObject.Add("var", JToken.FromObject(blockType == LeafBlockType.Branchy ? settings.BranchyStickVariance : settings.LeafyStickVariance));
+            }
+        }
+
+        /// <summary>
+        /// Submits the altered JSON object back into the asset data.
+        /// </summary>
+        private void SubmitPatchedJSONObject(JObject json, AssetLocation assetLoc, IAsset asset)
+        {
+            Mod.Logger.Notification($"{Lang.Get("bearsbranchyharvest:patch-notification-patch-success")}{assetLoc}");
+            asset.Data = System.Text.Encoding.UTF8.GetBytes(json.ToString());
         }
     }
 
