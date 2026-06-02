@@ -37,6 +37,8 @@ namespace BearsBranchyHarvest
             "game:blocktypes/plant/leaves/normal.json",
             "game:blocktypes/plant/leaves/branchy.json",
             "game:blocktypes/plant/leaves/bamboo.json",
+            "bdtree:blocktypes/plant/leaves/normal.json",
+            "bdtree:blocktypes/plant/leaves/branchy.json"
             ];
         #endregion Properties
     }
