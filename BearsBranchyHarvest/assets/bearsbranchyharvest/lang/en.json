@@ -4,10 +4,4 @@
   "settings-initializing-file": "No config file found. Created a new one.",
   "settings-missing-error": "Aborting block drop patches; can't find the settings object at all.",
   "settings-load-error": "Bad things happened while reading config file, falling back to default values. Error was ",
-  "patch-bit-asset": "Asset: ",
-  "patch-bit-exception": "Exception: ",
-  "patch-error-asset-missing": "Patch Error: Unable to load asset ",
-  "patch-error-asset-malformed": "Patch Error: Loaded asset could not be converted to a JObject.",
-  "patch-notification-no-patch": "Patch Skipped: Provided asset was found but no patch could be applied. Skipping. ",
-  "patch-notification-patch-success": "Patch Success: Successfully patched asset "
 }

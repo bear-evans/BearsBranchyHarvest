@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using System.Text;
 using Newtonsoft.Json.Linq;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
@@ -20,109 +19,6 @@ namespace BearsBranchyHarvest
         {
             return 0.96;
         }
-
-        #endregion Methods
-
-        #region Enums
-
-        public enum LeafBlockType
-        {
-            Branchy,
-            Leafy
-        }
-
-        #endregion Enums
-
-        #region Classes
-
-        /// <summary>
-        /// A C# object representing a quantity token in drops JSON.
-        /// </summary>
-        public class QuantityObject
-        {
-            #region Fields
-
-            public float avg;
-            public float var;
-
-            #endregion Fields
-
-            #region Constructors
-
-            public QuantityObject(float avg, float var)
-            {
-                this.avg = avg;
-                this.var = var;
-            }
-
-            #endregion Constructors
-        }
-
-        /// <summary>
-        /// A C# object representing a single drop preset in blocktypes JSON.
-        /// </summary>
-        public class DropPresetObject
-        {
-            #region Fields
-
-            public string? type;
-            public string code;
-            public QuantityObject quantity;
-            public string? tool;
-            public bool lastDrop;
-
-            #endregion Fields
-
-            #region Constructors
-
-            public DropPresetObject(string? type, string code, string? tool, float avg, float var)
-            {
-                this.type = type;
-                this.code = code;
-                quantity = new(avg, var);
-                this.tool = tool;
-                lastDrop = false;
-            }
-
-            public DropPresetObject(string? type, string code, string? tool, float avg, float var, bool lastDrop)
-            {
-                this.type = type;
-                this.code = code;
-                quantity = new(avg, var);
-                this.tool = tool;
-                this.lastDrop = lastDrop;
-            }
-
-            #endregion Constructors
-
-            #region Methods
-
-            // Converts the drop preset object to a JSON string
-            public string ToJSON()
-            {
-                StringBuilder sb = new();
-
-                if (type != null) {
-                    _ = sb.Append(JToken.FromObject(type));
-                }
-
-                _ = sb.Append(JToken.FromObject(code));
-                _ = sb.Append(JToken.FromObject(quantity));
-
-                if (tool != null) {
-                    _ = sb.Append(JToken.FromObject(tool));
-                }
-                _ = sb.Append(JToken.FromObject(lastDrop));
-
-                return sb.ToString();
-            }
-
-            #endregion Methods
-        }
-
-        #endregion Classes
-
-        #region Methods
 
         // Called on server and client
         // Useful for registering block/entity classes on both sides
@@ -163,8 +59,9 @@ namespace BearsBranchyHarvest
             BranchyHarvestSettings settings = BranchyHarvestSettingsLoader.CurrentSettings;
             bool isBranchy;
 
+            // interate through all registered blocks, looking for leaves and noting if they are branchy
             foreach (Block block in api.World.Blocks) {
-                if (block.Code == null) {
+                if (block.Code == null || IsBlacklisted(block, settings)) {
                     continue;
                 }
 
@@ -172,12 +69,14 @@ namespace BearsBranchyHarvest
 
                 if (block.Code.Path.Contains("leaves-") || isBranchy) {
                     if (block.Drops != null) {
-                        foreach (BlockDropItemStack drop in block.Drops) {
-                            if (drop.Code == null) {
-                                continue;
-                            }
+                        // stick drops are altered first
+                        if (settings.AlterStickDrops) {
+                            foreach (BlockDropItemStack drop in block.Drops) {
+                                if (drop.Code == null) {
+                                    continue;
+                                }
 
-                            if (settings.AlterStickDrops) {
+                                // find a stick drop and alter the drop values
                                 if (drop.Code.Equals("stick") || drop.Code.Equals("game:stick")) {
                                     if (isBranchy) {
                                         drop.Quantity.avg = settings.BranchyStickAverage;
@@ -191,12 +90,31 @@ namespace BearsBranchyHarvest
                             }
                         }
 
+                        // leaf block knife drops are added to the front of the array so they happen first and cancel the stick, seed, and other drops
                         if ((settings.AllowLeafyDropWithKnife && !isBranchy) || (settings.AllowBranchyDropWithKnife && isBranchy)) {
-                            (bool, BlockDropItemStack) leafDrop = GetLeafBlockDropStack(block, api);
+                            (bool isSuccessful, BlockDropItemStack itemStack) = GetLeafBlockDropStack(block, api);
 
-                            if (leafDrop.Item1) {
-                                block.Drops = block.Drops.Prepend(leafDrop.Item2).ToArray();
+                            if (isSuccessful) {
+                                block.Drops = block.Drops.Prepend(itemStack).ToArray();
                             }
+                        }
+                    }
+
+                    // once done with drops, we engage the fence connections
+                    if (settings.ConnectToFences && isBranchy) {
+                        //TODO: Get into the block's attributes and find fenceConnect, and set all sides to true, default { north: false, east: false, west: false, south: false }
+                        if (block.Attributes["fenceConnect"].Exists) {
+                            JToken? fenceConnectToken = block.Attributes["fenceConnect"].Token;
+
+                            if (fenceConnectToken == null) {
+                                Mod.Logger.Error("Can't find fence connect token.");
+                                continue;
+                            }
+
+                            fenceConnectToken["north"] = true;
+                            fenceConnectToken["west"] = true;
+                            fenceConnectToken["east"] = true;
+                            fenceConnectToken["south"] = true;
                         }
                     }
                 }
@@ -220,7 +138,7 @@ namespace BearsBranchyHarvest
         }
 
         /// <summary>
-        /// Helper function fabricate a BlockDropItemStack designed for leaf block drops.
+        /// Helper function to fabricate a BlockDropItemStack designed for leaf block drops.
         /// </summary>
         private (bool, BlockDropItemStack) GetLeafBlockDropStack(Block block, ICoreAPI api)
         {
@@ -232,9 +150,30 @@ namespace BearsBranchyHarvest
                 LastDrop = true
             };
 
+            // TODO: Set this up a little better. Feels very hackish to basically create throwaway parameters.
             bool didSucceed = leafDrop.Resolve(api.World, "", AssetLocation.Create(leafDrop.Code));
 
+            // it's rare I get to use a tuple
             return (didSucceed, leafDrop);
+        }
+
+        /// <summary>
+        /// Checks if the block is blacklisted. Returns false if the block is acceptable to use, true if it is blacklisted.
+        /// </summary>
+        private bool IsBlacklisted(Block block, BranchyHarvestSettings settings)
+        {
+            foreach (string blackListItem in settings.BlockBlacklist) {
+                if (block.Code.GetName().Contains(blackListItem)) {
+                    return true;
+                }
+            }
+
+            foreach (string blackListItem in settings.ModBlacklist) {
+                if (block.Code.Domain.Contains(blackListItem)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

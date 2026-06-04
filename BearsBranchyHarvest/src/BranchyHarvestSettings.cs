@@ -14,32 +14,32 @@ namespace BearsBranchyHarvest
         #region Properties
 
         public string AllowLeafBlockHarvestComment { get => "If true, allows branchy/non-branchy leaf blocks to drop when harvested with a knife. Default is true."; }
-        public bool AllowBranchyDropWithKnife { get; set; } = true;
-        public bool AllowLeafyDropWithKnife { get; set; } = true;
+        public bool AllowBranchyDropWithKnife { get => allowBranchyDrops; set => allowBranchyDrops = value; }
+        private bool allowBranchyDrops = true;
+        public bool AllowLeafyDropWithKnife { get => allowLeafyDrops; set => allowLeafyDrops = value; }
+        private bool allowLeafyDrops = true;
         public string AlterStickDropsComment { get => "Should the number of sticks dropped by a leaf block be altered by this mod. Default is true."; }
-        public bool AlterStickDrops { get; set; } = true;
+        public bool AlterStickDrops { get => alterStickDrops; set => alterStickDrops = value; }
+        private bool alterStickDrops = true;
         public string BranchyDropsComment { get => "The average number of sticks a branchy leaf block should drop and how much the drops should vary. Default is { avg: 3, var: 1}, which makes branchy blocks drop 2 to 4 sticks each time."; }
-        public float BranchyStickAverage { get; set; } = 3f;
-        public float BranchyStickVariance { get; set; } = 1f;
+        public float BranchyStickAverage { get => branchyStickAvg; set => branchyStickAvg = value >= 0 ? value : 0; }
+        private float branchyStickAvg = 3f;
+        public float BranchyStickVariance { get => branchyStickVar; set => branchyStickVar = value >= 0 ? value : 0; }
+        private float branchyStickVar = 1f;
         public string LeafyDropsComment { get => "The average number of sticks a non-branchy leaf block should drop and how much the drops should vary. Default is { avg: 1.5, var: 0.5}, which is 1 to 2 sticks."; }
-        public float LeafyStickAverage { get; set; } = 1.5f;
-        public float LeafyStickVariance { get; set; } = 0.5f;
-        //public string AlterSeedDropsComment { get => "Should the number of seeds dropped by a leaf block be altered by this mod, and if so, what should the multiplier be. All tree seed drop chances will be multiplied by this. Default is true and 5."; }
-        //public bool AlterSeedDrops { get; set; } = true;
-        //public float SeedChanceMultiplier { get; set; } = 5f;
-        //public string ShearsBoostComment { get => "Whether or not drop chances should be increased when using shears. Default is true."; }
-        //public bool AllowShearsBoostDrops { get; set; } = true;
-        //public string ShearsMultiplierComment { get => "What multipliers should be applied to drop chances for shears. These replace the ones above when using shears. Default is 0.75 stick chance and 10 seed chance."; }
-        //public float LeafyStickChanceShears { get; set; } = 0.75f;
-        //public float SeedChanceMultiplierShears { get; set; } = 10f;
-        public string AssetsToPatchListComment { get => "List of assets to apply these modifications to."; }
-        public List<AssetLocation> patchableAssetList { get; set; } = [
-            "game:blocktypes/plant/leaves/normal.json",
-            "game:blocktypes/plant/leaves/branchy.json",
-            "game:blocktypes/plant/leaves/bamboo.json",
-            "bdtree:blocktypes/plant/leaves/normal.json",
-            "bdtree:blocktypes/plant/leaves/branchy.json"
-            ];
+        public float LeafyStickAverage { get => leafyStickAvg; set => leafyStickAvg = value >= 0 ? value : 0; }
+        private float leafyStickAvg = 1.5f;
+        public float LeafyStickVariance { get => leafyStickVar; set => leafyStickVar = value >= 0 ? value : 0; }
+        private float leafyStickVar = 0.5f;
+        public string ConnectToFencesComment { get => "If true, branchy leaf blocks will connect to fences like other solid blocks. Useful for making hedges that look cohesive."; }
+        public bool ConnectToFences { get => connectToFences; set => connectToFences = value; }
+        private bool connectToFences = true;
+        public string BlacklistComment { get => "List of block/mod names that these changes should not be applied to. The blacklist will apply to any block/mod with a name that contains the string, it need not be a strict match. Be careful to not make it too broad (putting 'l' or 'v' here will disable the mod because it matches all [l]ea[v]es, for example). Turning on developer options and entering creative mode will show block names in the handbook if you need to find the name of a block."; }
+        public List<string> BlockBlacklist { get => blockBlacklist; set => blockBlacklist = value; }
+        private List<string> blockBlacklist = [];
+        public List<string> ModBlacklist { get => modBlacklist; set => modBlacklist = value; }
+        private List<string> modBlacklist = [];
+
         #endregion Properties
     }
 
