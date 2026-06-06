@@ -7,7 +7,7 @@
     "Bear"
   ],
   "description": "Harvest leaf blocks with a knife and increase their stick drops.",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "dependencies": {
     "game": "1.21.0"
   }

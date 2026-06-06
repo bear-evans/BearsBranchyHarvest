@@ -26,11 +26,11 @@ namespace BearsBranchyHarvest
         private float branchyStickAvg = 3f;
         public float BranchyStickVariance { get => branchyStickVar; set => branchyStickVar = value >= 0 ? value : 0; }
         private float branchyStickVar = 1f;
-        public string LeafyDropsComment { get => "The average number of sticks a non-branchy leaf block should drop and how much the drops should vary. Default is { avg: 1.5, var: 0.5}, which is 1 to 2 sticks."; }
+        public string LeafyDropsComment { get => "The average number of sticks a non-branchy leaf block should drop and how much the drops should vary. Default is { avg: 0.50, var: 0}, which is a 50% chance to drop one stick."; }
         public float LeafyStickAverage { get => leafyStickAvg; set => leafyStickAvg = value >= 0 ? value : 0; }
-        private float leafyStickAvg = 1.5f;
+        private float leafyStickAvg = 0.5f;
         public float LeafyStickVariance { get => leafyStickVar; set => leafyStickVar = value >= 0 ? value : 0; }
-        private float leafyStickVar = 0.5f;
+        private float leafyStickVar = 0;
         public string ConnectToFencesComment { get => "If true, branchy leaf blocks will connect to fences like other solid blocks. Useful for making hedges that look cohesive."; }
         public bool ConnectToFences { get => connectToFences; set => connectToFences = value; }
         private bool connectToFences = true;

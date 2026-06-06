@@ -102,7 +102,6 @@ namespace BearsBranchyHarvest
 
                     // once done with drops, we engage the fence connections
                     if (settings.ConnectToFences && isBranchy) {
-                        //TODO: Get into the block's attributes and find fenceConnect, and set all sides to true, default { north: false, east: false, west: false, south: false }
                         if (block.Attributes["fenceConnect"].Exists) {
                             JToken? fenceConnectToken = block.Attributes["fenceConnect"].Token;
 
@@ -128,7 +127,7 @@ namespace BearsBranchyHarvest
         {
             string[] subStrings = blockCode.Split("-");
             // HACK: this is pretty fragile. Need to do some more sophisticated targeting logic to get the state
-            if (subStrings[1].Contains("bambooleaves")) {
+            if (subStrings[0].Contains("bambooleaves")) {
                 subStrings[^1] = "placed";
             }
             else {
