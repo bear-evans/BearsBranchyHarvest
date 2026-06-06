@@ -21,8 +21,8 @@ Bear's Branchy Harvest has a configuration file where you can adjust its behavio
 * **AlterStickDrops** *(Default true)* - If true, the amount of sticks dropped by branchy and non-branchy leaf blocks will be altered by the following settings. If false, the default values or values determined by JSON patches will be used.
 * **BranchyStickAverage** *(Default 3)* - The average number of sticks a branchy leaf block will drop. The range of possible amounts will be the average plus and minus the variance (2 to 4 sticks by default).
 * **BranchyStickVariance** *(Default 1)* - The amount by which branchy stick drops will vary.
-* **LeafyStickAverage** *(Default 1.5)* - The average number of sticks a non-branchy leaf block will drop. The range of possible amounts will be the average plus and minus the variance (1 to 2 sticks by default).
-* **LeafyStickVariance** *(Default 0.5)* - The amount by which non-branchy stick drops will vary.
+* **LeafyStickAverage** *(Default 0.5)* - The average number of sticks a non-branchy leaf block will drop. The range of possible amounts will be the average plus and minus the variance (50% chance to drop 1 stick by default).
+* **LeafyStickVariance** *(Default 0)* - The amount by which non-branchy stick drops will vary.
 * **ConnectToFences** *(Default true)* - Makes branchy leaf blocks connect to fences like other solid blocks do.
 * **BlockBlacklist** (default []) - Blocks with names that *contain* any of these words/strings will be excluded.
 * **ModBlacklist** (default []) - Blocks from mod domains that *contain* any of these words/strings will be excluded.
