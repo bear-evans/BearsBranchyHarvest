@@ -21,16 +21,23 @@ namespace BearsBranchyHarvest
         public string AlterStickDropsComment { get => "Should the number of sticks dropped by a leaf block be altered by this mod. Default is true."; }
         public bool AlterStickDrops { get => alterStickDrops; set => alterStickDrops = value; }
         private bool alterStickDrops = true;
-        public string BranchyDropsComment { get => "The average number of sticks a branchy leaf block should drop and how much the drops should vary. Default is { avg: 3, var: 1}, which makes branchy blocks drop 2 to 4 sticks each time."; }
+        public string AlterSeedDropsComment { get => "Should the number of seeds dropped by a leaf block be altered by this mod. Default is true."; }
+        public bool AlterSeedDrops { get => alterSeedDrops; set => alterSeedDrops = value; }
+        private bool alterSeedDrops = true;
+        public string BranchyDropsComment { get => "The average number of sticks a branchy leaf block should drop and how much the drops should vary. Default is { avg: 3, var: 1}, which makes branchy blocks drop 2 to 4 sticks each time. The base chance for a seed drop from any particular tree will be multiplied by the branchySeedMultiplier value."; }
         public float BranchyStickAverage { get => branchyStickAvg; set => branchyStickAvg = value >= 0 ? value : 0; }
         private float branchyStickAvg = 3f;
         public float BranchyStickVariance { get => branchyStickVar; set => branchyStickVar = value >= 0 ? value : 0; }
         private float branchyStickVar = 1f;
-        public string LeafyDropsComment { get => "The average number of sticks a non-branchy leaf block should drop and how much the drops should vary. Default is { avg: 0.50, var: 0}, which is a 50% chance to drop one stick."; }
+        public float BranchySeedMultiplier { get => branchySeedMultiplier; set => branchySeedMultiplier = value >= 1f ? value : 1f; }
+        private float branchySeedMultiplier = 5f;
+        public string LeafyDropsComment { get => "The average number of sticks a non-branchy leaf block should drop and how much the drops should vary. Default is { avg: 0.50, var: 0}, which is a 50% chance to drop one stick. The base chance for a seed drop from any particular tree will be multiplied by the leafySeedMultiplier value."; }
         public float LeafyStickAverage { get => leafyStickAvg; set => leafyStickAvg = value >= 0 ? value : 0; }
         private float leafyStickAvg = 0.5f;
         public float LeafyStickVariance { get => leafyStickVar; set => leafyStickVar = value >= 0 ? value : 0; }
         private float leafyStickVar = 0;
+        public float LeafySeedMultiplier { get => leafySeedMultiplier; set => leafySeedMultiplier = value >= 1f ? value : 1f; }
+        private float leafySeedMultiplier = 2f;
         public string ConnectToFencesComment { get => "If true, branchy leaf blocks will connect to fences like other solid blocks. Useful for making hedges that look cohesive."; }
         public bool ConnectToFences { get => connectToFences; set => connectToFences = value; }
         private bool connectToFences = true;
@@ -77,9 +84,10 @@ namespace BearsBranchyHarvest
 
                 if (CurrentSettings == null) {
                     CurrentSettings = new BranchyHarvestSettings();
-                    api.StoreModConfig<BranchyHarvestSettings>(CurrentSettings, SettingsFilename);
                     Mod.Logger.Notification(Lang.Get("bearsbranchyharvest:settings-initialize-file"));
                 }
+
+                api.StoreModConfig<BranchyHarvestSettings>(CurrentSettings, SettingsFilename);
             }
             catch (Exception e) {
                 Mod.Logger.Error($"{Lang.Get("bearsbranchyharvest:settings-load-error")} {e.Message}");

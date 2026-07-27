@@ -8,37 +8,21 @@ using Vintagestory.API.Server;
 
 namespace BearsBranchyHarvest
 {
-    /// <summary>
-    /// Asset patching system that scans for leaf block assets and modifies their drops.
-    /// </summary>
+    /// <summary>Asset patching system that scans for leaf block assets and modifies their drops.</summary>
     public class BearsBranchyHarvestModSystem : ModSystem
     {
-        #region Methods
+        #region Fields
 
-        public override double ExecuteOrder()
-        {
-            return 0.96;
-        }
+        private CompatHandler compatHandler = new();
 
-        // Called on server and client
-        // Useful for registering block/entity classes on both sides
-        public override void Start(ICoreAPI api)
-        {
-            base.Start(api);
-        }
+        #endregion Fields
 
-        public override void StartServerSide(ICoreServerAPI api)
-        {
-            Mod.Logger.Notification(Lang.Get("bearsbranchyharvest:hello"));
-        }
-
-        public override void StartClientSide(ICoreClientAPI api)
-        {
-            Mod.Logger.Notification(Lang.Get("bearsbranchyharvest:hello"));
-        }
+        #region Vintage Story Methods
 
         /// <summary>
-        /// Hijacks the leaf block drops once they have been converted to C# objects but before they have been fully finalized. We do this here to avoid the JSON fiasco of mods patching and clobbering each other's JSON.
+        /// Hijacks the leaf block drops once they have been converted to C# objects but before they
+        /// have been fully finalized. We do this here to avoid the JSON fiasco of mods patching and
+        /// clobbering each other's JSON.
         /// </summary>
         public override void AssetsFinalize(ICoreAPI api)
         {
@@ -70,7 +54,7 @@ namespace BearsBranchyHarvest
                 if (block.Code.Path.Contains("leaves-") || isBranchy) {
                     if (block.Drops != null) {
                         // stick drops are altered first
-                        if (settings.AlterStickDrops) {
+                        if (settings.AlterStickDrops || settings.AlterSeedDrops) {
                             foreach (BlockDropItemStack drop in block.Drops) {
                                 if (drop.Code == null) {
                                     continue;
@@ -78,47 +62,76 @@ namespace BearsBranchyHarvest
 
                                 // find a stick drop and alter the drop values
                                 if (drop.Code.Equals("stick") || drop.Code.Equals("game:stick")) {
-                                    if (isBranchy) {
-                                        drop.Quantity.avg = settings.BranchyStickAverage;
-                                        drop.Quantity.var = settings.BranchyStickVariance;
-                                    }
-                                    else {
-                                        drop.Quantity.avg = settings.LeafyStickAverage;
-                                        drop.Quantity.var = settings.LeafyStickVariance;
+                                    if (settings.AlterStickDrops) {
+                                        if (isBranchy) {
+                                            drop.Quantity.avg = settings.BranchyStickAverage;
+                                            drop.Quantity.var = settings.BranchyStickVariance;
+                                        }
+                                        else {
+                                            drop.Quantity.avg = settings.LeafyStickAverage;
+                                            drop.Quantity.var = settings.LeafyStickVariance;
+                                        }
                                     }
                                 }
                             }
                         }
-
-                        // leaf block knife drops are added to the front of the array so they happen first and cancel the stick, seed, and other drops
-                        if ((settings.AllowLeafyDropWithKnife && !isBranchy) || (settings.AllowBranchyDropWithKnife && isBranchy)) {
-                            (bool isSuccessful, BlockDropItemStack itemStack) = GetLeafBlockDropStack(block, api);
-
-                            if (isSuccessful) {
-                                block.Drops = block.Drops.Prepend(itemStack).ToArray();
-                            }
-                        }
                     }
 
-                    // once done with drops, we engage the fence connections
-                    if (settings.ConnectToFences && isBranchy) {
-                        if (block.Attributes["fenceConnect"].Exists) {
-                            JToken? fenceConnectToken = block.Attributes["fenceConnect"].Token;
+                    // leaf block knife drops are added to the front of the array so they happen
+                    // first and cancel the stick, seed, and other drops
+                    if ((settings.AllowLeafyDropWithKnife && !isBranchy) || (settings.AllowBranchyDropWithKnife && isBranchy)) {
+                        (bool isSuccessful, BlockDropItemStack itemStack) = GetLeafBlockDropStack(block, api);
 
-                            if (fenceConnectToken == null) {
-                                Mod.Logger.Error("Can't find fence connect token.");
-                                continue;
-                            }
-
-                            fenceConnectToken["north"] = true;
-                            fenceConnectToken["west"] = true;
-                            fenceConnectToken["east"] = true;
-                            fenceConnectToken["south"] = true;
+                        if (isSuccessful) {
+                            block.Drops = block.Drops.Prepend(itemStack).ToArray();
                         }
+                    }
+                }
+
+                // once done with drops, we engage the fence connections
+                if (settings.ConnectToFences && isBranchy) {
+                    if (block.Attributes["fenceConnect"].Exists) {
+                        JToken? fenceConnectToken = block.Attributes["fenceConnect"].Token;
+
+                        if (fenceConnectToken == null) {
+                            Mod.Logger.Error("Can't find fence connect token.");
+                            continue;
+                        }
+
+                        fenceConnectToken["north"] = true;
+                        fenceConnectToken["west"] = true;
+                        fenceConnectToken["east"] = true;
+                        fenceConnectToken["south"] = true;
                     }
                 }
             }
         }
+
+        public override double ExecuteOrder()
+        {
+            return 0.96;
+        }
+
+        // Called on server and client Useful for registering block/entity classes on both sides
+        public override void Start(ICoreAPI api)
+        {
+            base.Start(api);
+            compatHandler.OnStart(api);
+        }
+
+        public override void StartClientSide(ICoreClientAPI api)
+        {
+            Mod.Logger.Notification(Lang.Get("bearsbranchyharvest:hello"));
+        }
+
+        public override void StartServerSide(ICoreServerAPI api)
+        {
+            compatHandler.TryRemoveXSkillsPatch(api);
+        }
+
+        #endregion Vintage Story Methods
+
+        #region Private Methods
 
         /// <summary>
         /// Removes the state descriptor of the leaf block and replaces it with the "placed" state.
@@ -157,7 +170,8 @@ namespace BearsBranchyHarvest
         }
 
         /// <summary>
-        /// Checks if the block is blacklisted. Returns false if the block is acceptable to use, true if it is blacklisted.
+        /// Checks if the block is blacklisted. Returns false if the block is acceptable to use,
+        /// true if it is blacklisted.
         /// </summary>
         private bool IsBlacklisted(Block block, BranchyHarvestSettings settings)
         {
@@ -174,7 +188,7 @@ namespace BearsBranchyHarvest
             }
             return false;
         }
-    }
 
-        #endregion Methods
+        #endregion Private Methods
+    }
 }
