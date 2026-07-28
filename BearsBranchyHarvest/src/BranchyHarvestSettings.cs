@@ -55,10 +55,17 @@ namespace BearsBranchyHarvest
     /// </summary>
     public class BranchyHarvestSettingsLoader : ModSystem
     {
+        #region Constants
+
+        /// <summary>The string name of the settings file, used to load it.</summary>
+        public static string SettingsFilename { get => "BearsBranchyHarvest.json"; }
+
+        #endregion Constants
+
         #region Properties
 
-        public static BranchyHarvestSettings? CurrentSettings { get; private set; }
-        public static string SettingsFilename { get => "BearsBranchyHarvest.json"; }
+        /// <summary>A reference to the current settings object.</summary>
+        public BranchyHarvestSettings? CurrentSettings { get; private set; }
 
         #endregion Properties
 

@@ -12,6 +12,7 @@ namespace BearsBranchyHarvest
     {
         #region Properties
 
+        /// <summary>Stores the mod id to be used by Harmony.</summary>
         public static string HarmonyID {
             get => "bearsbranchyharvest";
         }
@@ -24,7 +25,7 @@ namespace BearsBranchyHarvest
 
         #endregion Fields
 
-        #region Public Methods
+        #region Vintage Story Methods
 
         /// <summary>Initializes a harmony instance to handle patching and unpatching.</summary>
         public void OnStart(ICoreAPI api)
@@ -32,6 +33,14 @@ namespace BearsBranchyHarvest
             harmony = new Harmony(HarmonyID);
         }
 
+        #endregion Vintage Story Methods
+
+        #region Mod Handling
+
+        /// <summary>
+        /// Scans for any mods which we need compatibility for and creates handler interfaces to
+        /// them from reflection.
+        /// </summary>
         public List<IFriendModHandler> GetFriendMods(ICoreAPI api)
         {
             List<IFriendModHandler> friends = [];
@@ -46,6 +55,11 @@ namespace BearsBranchyHarvest
             return friends;
         }
 
+        /// <summary>
+        /// Extracts the XSkills compat handler from the hidden assembly (an embedded resource DLL)
+        /// and instantiates it with reflection. This keeps this DLL from having to reference mod
+        /// code that might not exist.
+        /// </summary>
         public IFriendModHandler? GetXSkillsFriendAssembly(ICoreAPI api)
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
@@ -57,6 +71,7 @@ namespace BearsBranchyHarvest
             }
 #endif
 
+            /// pulls the assembly as a byte stream
             using Stream? stream = assembly.GetManifestResourceStream("BearsBranchyHarvest.BranchyHarvestAndFriends.dll");
             if (stream == null) {
                 api.Logger.Warning("XSkills detected, but Branchy Harvest was unable to load the compatibility DLL.");
@@ -67,6 +82,7 @@ namespace BearsBranchyHarvest
 
             Assembly compatAssembly = Assembly.Load(assemblyData);
 
+            // extracts the handler
             Type? handlerType = compatAssembly.GetType("BearsBranchyHarvest.AndFriends.XSkillsFriendHandler");
             if (handlerType == null) {
                 api.Logger.Warning($"Failed to find XSkillsFriendHandler type.");
@@ -81,6 +97,6 @@ namespace BearsBranchyHarvest
             return handler;
         }
 
-        #endregion Public Methods
+        #endregion Mod Handling
     }
 }

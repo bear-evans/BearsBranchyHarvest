@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
@@ -13,7 +12,23 @@ namespace BearsBranchyHarvest
     /// <summary>Asset patching system that scans for leaf block assets and modifies their drops.</summary>
     public class BearsBranchyHarvestModSystem : ModSystem
     {
-        public AssetLocation TreeseedWildcard { get; } = new AssetLocation("treeseed-*");
+        #region Properties
+
+        /// <summary>
+        /// An asset location that stores the wildcard needed to identify tree seed drops.
+        /// </summary>
+        public AssetLocation TreeseedWildcard { get; } = new AssetLocation("*", "treeseed-*");
+
+        #endregion Properties
+
+        #region Public Methods
+
+        public override double ExecuteOrder()
+        {
+            return 0.96;
+        }
+
+        #endregion Public Methods
 
         #region Fields
 
@@ -23,6 +38,25 @@ namespace BearsBranchyHarvest
         #endregion Fields
 
         #region Vintage Story Methods
+
+        /// <summary>Initializes the mod compatibility handler.</summary>
+        public override void Start(ICoreAPI api)
+        {
+            base.Start(api);
+            compatHandler.OnStart(api);
+            friendHandlers = compatHandler.GetFriendMods(api);
+        }
+
+        /// <summary>
+        /// Initializes mod compat code. This runs later, at the beginning of the actual game,
+        /// because it has to wait for other mods to finish their Harmony patches.
+        /// </summary>
+        public override void StartServerSide(ICoreServerAPI api)
+        {
+            foreach (IFriendModHandler friend in friendHandlers) {
+                friend.FriendStartServer(api);
+            }
+        }
 
         /// <summary>
         /// Hijacks the leaf block drops once they have been converted to C# objects but before they
@@ -38,14 +72,13 @@ namespace BearsBranchyHarvest
                 return;
             }
 
-            if (BranchyHarvestSettingsLoader.CurrentSettings == null) {
+            if (api.ModLoader.GetModSystem<BranchyHarvestSettingsLoader>()?.CurrentSettings is not BranchyHarvestSettings settings) {
                 Mod.Logger.Error(Lang.Get("bearsbranchyharvest:settings-missing-error"));
                 // couldn't find settings, abort
                 return;
             }
 
             // initialize variables out here so we can reuse the same memory addresses
-            BranchyHarvestSettings settings = BranchyHarvestSettingsLoader.CurrentSettings;
             bool isBranchy;
 
             // interate through all registered blocks, looking for leaves and noting if they are branchy
@@ -78,6 +111,7 @@ namespace BearsBranchyHarvest
                                         }
                                     }
                                 }
+                                // search for tree seeds in the drops as well and multiply the drop chance
                                 if (settings.AlterSeedDrops) {
                                     if (WildcardUtil.Match(TreeseedWildcard, drop.Code)) {
                                         if (isBranchy) {
@@ -122,31 +156,7 @@ namespace BearsBranchyHarvest
             }
         }
 
-        public override double ExecuteOrder()
-        {
-            return 0.96;
-        }
-
-        // Called on server and client Useful for registering block/entity classes on both sides
-        public override void Start(ICoreAPI api)
-        {
-            base.Start(api);
-            compatHandler.OnStart(api);
-            friendHandlers = compatHandler.GetFriendMods(api);
-        }
-
-        public override void StartClientSide(ICoreClientAPI api)
-        {
-            Mod.Logger.Notification(Lang.Get("bearsbranchyharvest:hello"));
-        }
-
-        public override void StartServerSide(ICoreServerAPI api)
-        {
-            foreach (IFriendModHandler friend in friendHandlers) {
-                friend.FriendStartServer(api);
-            }
-        }
-
+        /// <summary>Signals cleanup to all the mod compat handlers, if any.</summary>
         public override void Dispose()
         {
             foreach (IFriendModHandler friend in friendHandlers) {
@@ -156,7 +166,7 @@ namespace BearsBranchyHarvest
 
         #endregion Vintage Story Methods
 
-        #region Private Methods
+        #region Utility Methods
 
         /// <summary>
         /// Removes the state descriptor of the leaf block and replaces it with the "placed" state.
@@ -214,6 +224,6 @@ namespace BearsBranchyHarvest
             return false;
         }
 
-        #endregion Private Methods
+        #endregion Utility Methods
     }
 }

@@ -5,7 +5,7 @@
 	  <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <BaseOutputPath>D:\Development\Vintage Story\BearsBranchyHarvest\BearsBranchyHarvest\compat</BaseOutputPath>
+    <BaseOutputPath>D:\Development\Vintage Story\BearsBranchyHarvest\BranchyHarvestAndFriends\bin</BaseOutputPath>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
 	  <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
   </PropertyGroup>

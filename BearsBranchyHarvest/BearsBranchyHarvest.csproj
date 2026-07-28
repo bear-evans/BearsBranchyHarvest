@@ -56,6 +56,10 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="BranchyHarvestAndFriends.dll" />
+	</ItemGroup>
 	
 <ItemGroup>
   <Content Include="modinfo.json">
@@ -67,6 +71,10 @@
   <Content Include="modicon.png" Condition="Exists('modicon.png')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
   </Content>
+</ItemGroup>
+
+<ItemGroup>
+  <EmbeddedResource Include="BranchyHarvestAndFriends.dll" />
 </ItemGroup>
 
 <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>

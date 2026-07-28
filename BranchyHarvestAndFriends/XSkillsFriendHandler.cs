@@ -12,19 +12,30 @@ namespace BearsBranchyHarvest.AndFriends
     /// </summary>
     public class XSkillsFriendHandler : IFriendModHandler
     {
+        /// <summary>
+        /// Reference to the shared Harmony instance. Should be set by the compat handler when
+        /// instantiating this handler.
+        /// </summary>
         public Harmony SharedHarmony { get => harmony; set => harmony = value; }
+
         private Harmony? harmony;
 
+        /// <summary>Does nothing for this mod.</summary>
         public void FriendAssetFinalize(ICoreAPI api)
         {
         }
 
+        /// <summary>
+        /// Removes the leaf block drop patch from XSkills, and replaces it with similar
+        /// functionality but with knives.
+        /// </summary>
         public void FriendStartServer(ICoreAPI api)
         {
             XSkillsLeafPatchRemover(api);
             harmony?.PatchAll();
         }
 
+        /// <summary>Unpatches our patch.</summary>
         public void OnClose()
         {
             harmony?.UnpatchAll();
@@ -37,6 +48,7 @@ namespace BearsBranchyHarvest.AndFriends
         public bool XSkillsLeafPatchRemover(ICoreAPI api)
         {
             try {
+                // look for the XSkills assembly
                 Assembly? xskills = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name!.Equals("xskills", StringComparison.OrdinalIgnoreCase));
 
                 if (xskills == null) {
@@ -50,6 +62,7 @@ namespace BearsBranchyHarvest.AndFriends
                     return false;
                 }
 
+                // find the specific offending patch
                 MethodInfo? targetMethod = xSkillType.GetMethod("GetDrops", BindingFlags.Public | BindingFlags.Instance);
                 if (targetMethod == null) {
                     api.Logger.Warning("XSkills leaf behavior found, but unable to find GetDrops. Compatibility patching failed.");
@@ -69,6 +82,7 @@ namespace BearsBranchyHarvest.AndFriends
                     return false;
                 }
 
+                // remove it
                 harmony!.Unpatch(targetMethod, targetPatch.PatchMethod);
 
                 return true;
@@ -94,16 +108,19 @@ namespace BearsBranchyHarvest.AndFriends
             }
 
             // if the currently held item is a knife, be cool.
-
             ItemStack? heldItem = byPlayer?.InventoryManager?.ActiveHotbarSlot?.Itemstack;
             if (heldItem != null && heldItem.Collectible?.Tool == EnumTool.Knife) {
-                return;
+                // if holding a knife, return ONLY the leaf drops
+                __result = __result
+                    .Where(stack => stack != null && stack.Collectible is BlockLeaves)
+                    .ToArray();
             }
-
-            // otherwise return everything but the leaf drops
-            __result = __result
-                .Where(stack => stack != null && stack.Collectible is not BlockLeaves)
-                .ToArray();
+            else {
+                // otherwise return everything but the leaf drops
+                __result = __result
+                    .Where(stack => stack != null && stack.Collectible is not BlockLeaves)
+                    .ToArray();
+            }
         }
     }
 }
