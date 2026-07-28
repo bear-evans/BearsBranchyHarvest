@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Linq;
+using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using HarmonyLib;
 using Vintagestory.API.Common;
@@ -31,61 +32,53 @@ namespace BearsBranchyHarvest
             harmony = new Harmony(HarmonyID);
         }
 
-        /// <summary>Checks for any mods that require compatibility and patch them.</summary>
-        public void TryRemoveXSkillsPatch(ICoreAPI api)
+        public List<IFriendModHandler> GetFriendMods(ICoreAPI api)
         {
+            List<IFriendModHandler> friends = [];
+
             if (api.ModLoader.IsModEnabled("xskills")) {
-                _ = XSkillsLeafPatchRemover(api);
+                IFriendModHandler? xskillsHandler = GetXSkillsFriendAssembly(api);
+                if (xskillsHandler != null) {
+                    friends.Add(xskillsHandler);
+                    xskillsHandler.SharedHarmony = harmony!;
+                }
             }
+            return friends;
         }
 
-        /// <summary>
-        /// Uses the dark and forbidden magick of reflection to remove the patch that XSkills has
-        /// that destroys any leaf block drops when the player is not holding a saw.
-        /// </summary>
-        public bool XSkillsLeafPatchRemover(ICoreAPI api)
+        public IFriendModHandler? GetXSkillsFriendAssembly(ICoreAPI api)
         {
-            try {
-                Assembly? xskills = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name!.Equals("xskills", StringComparison.OrdinalIgnoreCase));
+            Assembly assembly = Assembly.GetExecutingAssembly();
 
-                if (xskills == null) {
-                    api.Logger.Warning("XSkills mod detected, but unable to locate assembly. Compatibility patching failed.");
-                    return false;
-                }
-
-                Type? xSkillType = xskills.GetType("XSkills.XSkillsLeavesBehavior");
-                if (xSkillType == null) {
-                    api.Logger.Warning("XSkills assembly found, but unable to find XSkillsLeavesBehavior. Compatibility patching failed.");
-                    return false;
-                }
-
-                MethodInfo? targetMethod = xSkillType.GetMethod("GetDrops", BindingFlags.Public | BindingFlags.Instance);
-                if (targetMethod == null) {
-                    api.Logger.Warning("XSkills leaf behavior found, but unable to find GetDrops. Compatibility patching failed.");
-                    return false;
-                }
-
-                Patches patches = Harmony.GetPatchInfo(targetMethod);
-                if (patches == null) {
-                    api.Logger.Warning("XSkillsLeafBehavior target method found, but no patches exist. Compatibility patching failed.");
-                    return false;
-                }
-
-                Patch? targetPatch = patches.Postfixes.FirstOrDefault(p => p.PatchMethod.DeclaringType?.Name == "Patch_XSkillsLeavesBehavior_GetDrops");
-
-                if (targetPatch == null) {
-                    api.Logger.Warning("XSkillsLeafBehavior target method found, but could not find the specific patch. Compatibility patching failed.");
-                    return false;
-                }
-
-                harmony!.Unpatch(targetMethod, targetPatch.PatchMethod);
-
-                return true;
+#if DEBUG
+            string[] resourceNames = assembly.GetManifestResourceNames();
+            foreach (string resourceName in resourceNames) {
+                api.Logger.Debug(resourceName);
             }
-            catch (Exception ex) {
-                api.Logger.Error($"XSkills compatibility patching failed. {ex.Message}");
-                return false;
+#endif
+
+            using Stream? stream = assembly.GetManifestResourceStream("BearsBranchyHarvest.BranchyHarvestAndFriends.dll");
+            if (stream == null) {
+                api.Logger.Warning("XSkills detected, but Branchy Harvest was unable to load the compatibility DLL.");
+                return null;
             }
+            byte[] assemblyData = new byte[stream.Length];
+            _ = stream.Read(assemblyData, 0, assemblyData.Length);
+
+            Assembly compatAssembly = Assembly.Load(assemblyData);
+
+            Type? handlerType = compatAssembly.GetType("BearsBranchyHarvest.AndFriends.XSkillsFriendHandler");
+            if (handlerType == null) {
+                api.Logger.Warning($"Failed to find XSkillsFriendHandler type.");
+                return null;
+            }
+
+            if (Activator.CreateInstance(handlerType) is not IFriendModHandler handler) {
+                api.Logger.Warning($"Failed to create an instance of {handlerType}");
+                return null;
+            }
+
+            return handler;
         }
 
         #endregion Public Methods

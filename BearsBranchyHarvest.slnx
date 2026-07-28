@@ -1,4 +1,7 @@
 <Solution>
-  <Project Path="BearsBranchyHarvest/BearsBranchyHarvest.csproj" />
+  <Project Path="BearsBranchyHarvest/BearsBranchyHarvest.csproj">
+    <BuildDependency Project="BranchyHarvestAndFriends/BranchyHarvestAndFriends.csproj" />
+  </Project>
+  <Project Path="BranchyHarvestAndFriends/BranchyHarvestAndFriends.csproj" Id="06cf75e7-6cb4-40cc-817e-6e59d462f0af" />
   <Project Path="CakeBuild/CakeBuild.csproj" />
 </Solution>

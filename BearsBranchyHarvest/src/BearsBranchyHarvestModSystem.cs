@@ -1,19 +1,24 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
+using Vintagestory.API.Util;
 
 namespace BearsBranchyHarvest
 {
     /// <summary>Asset patching system that scans for leaf block assets and modifies their drops.</summary>
     public class BearsBranchyHarvestModSystem : ModSystem
     {
+        public AssetLocation TreeseedWildcard { get; } = new AssetLocation("treeseed-*");
+
         #region Fields
 
         private CompatHandler compatHandler = new();
+        private List<IFriendModHandler> friendHandlers = [];
 
         #endregion Fields
 
@@ -61,8 +66,8 @@ namespace BearsBranchyHarvest
                                 }
 
                                 // find a stick drop and alter the drop values
-                                if (drop.Code.Equals("stick") || drop.Code.Equals("game:stick")) {
-                                    if (settings.AlterStickDrops) {
+                                if (settings.AlterStickDrops) {
+                                    if (drop.Code.Equals("stick") || drop.Code.Equals("game:stick")) {
                                         if (isBranchy) {
                                             drop.Quantity.avg = settings.BranchyStickAverage;
                                             drop.Quantity.var = settings.BranchyStickVariance;
@@ -70,6 +75,16 @@ namespace BearsBranchyHarvest
                                         else {
                                             drop.Quantity.avg = settings.LeafyStickAverage;
                                             drop.Quantity.var = settings.LeafyStickVariance;
+                                        }
+                                    }
+                                }
+                                if (settings.AlterSeedDrops) {
+                                    if (WildcardUtil.Match(TreeseedWildcard, drop.Code)) {
+                                        if (isBranchy) {
+                                            drop.Quantity.avg *= settings.BranchySeedMultiplier;
+                                        }
+                                        else {
+                                            drop.Quantity.avg *= settings.LeafySeedMultiplier;
                                         }
                                     }
                                 }
@@ -82,7 +97,7 @@ namespace BearsBranchyHarvest
                     if ((settings.AllowLeafyDropWithKnife && !isBranchy) || (settings.AllowBranchyDropWithKnife && isBranchy)) {
                         (bool isSuccessful, BlockDropItemStack itemStack) = GetLeafBlockDropStack(block, api);
 
-                        if (isSuccessful) {
+                        if (isSuccessful && block.Drops != null) {
                             block.Drops = block.Drops.Prepend(itemStack).ToArray();
                         }
                     }
@@ -117,6 +132,7 @@ namespace BearsBranchyHarvest
         {
             base.Start(api);
             compatHandler.OnStart(api);
+            friendHandlers = compatHandler.GetFriendMods(api);
         }
 
         public override void StartClientSide(ICoreClientAPI api)
@@ -126,7 +142,16 @@ namespace BearsBranchyHarvest
 
         public override void StartServerSide(ICoreServerAPI api)
         {
-            compatHandler.TryRemoveXSkillsPatch(api);
+            foreach (IFriendModHandler friend in friendHandlers) {
+                friend.FriendStartServer(api);
+            }
+        }
+
+        public override void Dispose()
+        {
+            foreach (IFriendModHandler friend in friendHandlers) {
+                friend.OnClose();
+            }
         }
 
         #endregion Vintage Story Methods
